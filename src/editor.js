@@ -385,7 +385,14 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
             }
         }
 
-        var ctx = canvas.getContext('2d');
+        if ((drawRect === undefined) || (drawRect.canvas === undefined)) {
+            var ctx = canvas.getContext('2d');
+        } else {
+            if (drawRect.canvas === null) {
+                return;
+            }
+            var ctx = drawRect.canvas.getContext('2d');
+        }
         if (drawRect === undefined) {
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, logicalWidth, logicalHeight);
