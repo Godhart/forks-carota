@@ -1,3 +1,5 @@
+//collapse
+
 var per = require('per');
 var carotaDoc = require('./doc');
 var dom = require('./dom');
@@ -17,28 +19,53 @@ setInterval(function() {
     }
 }, 200);
 
-exports.create = function(element) {
+exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOnly, showOverflow, drawRect) {
 
-    // We need the host element to be a container:
-    if (dom.effectiveStyle(element, 'position') !== 'absolute') {
-        element.style.position = 'relative';
+    if (readOnly === undefined) {
+        readOnly = false;
+    }
+    if (showOverflow === undefined) {
+        showOverflow = true;
     }
 
-    element.innerHTML =
-        '<div class="carotaSpacer">' +
-            '<canvas width="100" height="100" class="carotaEditorCanvas" style="position: absolute;"></canvas>' +
-        '</div>' +
-        '<div class="carotaTextArea" style="overflow: hidden; position: absolute; height: 0;">' +
-            '<textarea autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="0" ' +
-            'style="position: absolute; padding: 0px; width: 1000px; height: 1em; ' +
-            'outline: none; font-size: 4px;"></textarea>'
-        '</div>';
+    if ((canvas === undefined) && (spacer === undefined) && (textAreaDiv === undefined) && (textArea === undefined)) {
+        // We need the host element to be a container:
+        if (dom.effectiveStyle(element, 'position') !== 'absolute') {
+            element.style.position = 'relative';
+        }
 
-    var canvas = element.querySelector('canvas'),
-        spacer = element.querySelector('.carotaSpacer'),
-        textAreaDiv = element.querySelector('.carotaTextArea'),
-        textArea = element.querySelector('textarea'),
-        doc = carotaDoc(),
+        // If canvas and related items are not specified - create them
+        element.innerHTML =
+            '<div class="carotaSpacer">' +
+                '<canvas width="100" height="100" class="carotaEditorCanvas" style="position: absolute;"></canvas>' +
+            '</div>' +
+            '<div class="carotaTextArea" style="overflow: hidden; position: absolute; height: 0;">' +
+                '<textarea autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="0" ' +
+                'style="position: absolute; padding: 0px; width: 1000px; height: 1em; ' +
+                'outline: none; font-size: 4px;"></textarea>'
+            '</div>';
+
+        canvas = element.querySelector('canvas');
+        spacer = element.querySelector('.carotaSpacer');
+        textAreaDiv = element.querySelector('.carotaTextArea');
+        textArea = element.querySelector('textarea');
+    } else {
+        // Otherwise - get unspecified items from element
+        if (canvas === undefined) {
+            canvas = element.querySelector('canvas');
+        }
+        if (spacer === undefined) {
+            spacer = element.querySelector('.carotaSpacer');
+        }
+        if (textAreaDiv === undefined) {
+            textAreaDiv = element.querySelector('.carotaTextArea');
+        }
+        if (textArea === undefined) {
+            textArea = element.querySelector('textarea');
+        }
+    }
+
+    var doc = carotaDoc(!readOnly),
         keyboardSelect = 0,
         keyboardX = null, nextKeyboardX = null,
         selectDragStart = null,
@@ -46,7 +73,7 @@ exports.create = function(element) {
         textAreaContent = '',
         richClipboard = null,
         plainClipboard = null;
-    
+
     var toggles = {
         66: 'bold',
         73: 'italic',
@@ -278,12 +305,15 @@ exports.create = function(element) {
         return handled;
     };
 
-    dom.handleEvent(textArea, 'keydown', function(ev) {
-        if (handleKey(ev.keyCode, ev.shiftKey, ev.ctrlKey)) {
-            return false;
-        }
-        console.log(ev.which);
-    });
+    // dom.handleEvent(textArea, 'keydown', function(ev) {
+    if ((textArea != null) && (!readOnly)) {
+        dom.handleEvent(textArea, 'keydown', function(ev) {
+            if (handleKey(ev.keyCode, ev.shiftKey, ev.ctrlKey)) {
+                return false;
+            }
+            console.log(ev.which);
+        })
+    };
 
     var verticalAlignment = 'top';
     
@@ -294,12 +324,17 @@ exports.create = function(element) {
 
     function getVerticalOffset() {
         var docHeight = doc.frame.bounds().h;
-        if (docHeight < element.clientHeight) { 
+        if (drawRect === undefined) {
+            var eh = element.clientHeight;
+        } else {
+            var eh = drawRect.h;
+        }
+        if (docHeight < eh) { 
             switch (verticalAlignment) {
                 case 'middle':
-                    return (element.clientHeight - docHeight) / 2;
+                    return (eh - docHeight) / 2;
                 case 'bottom':
-                    return element.clientHeight - docHeight;
+                    return eh - docHeight;
             }
         }
         return 0;
@@ -307,7 +342,11 @@ exports.create = function(element) {
 
     var paint = function() {
 
-        var availableWidth = element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!
+        if (drawRect === undefined) {
+            var availableWidth = element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!        
+        } else {
+            var availableWidth = drawRect.w * 1; // adjust to 0.5 to see if we draw in the wrong places!        
+        }
         if (doc.width() !== availableWidth) {
             doc.width(availableWidth);
         }
@@ -315,51 +354,89 @@ exports.create = function(element) {
         var docHeight = doc.frame.bounds().h;
 
         var dpr = Math.max(1, window.devicePixelRatio || 1);
+        if(drawRect === undefined) {
         
-        var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
-            logicalHeight = element.clientHeight;
-        
-        canvas.width = dpr * logicalWidth;
-        canvas.height = dpr * logicalHeight;
-        canvas.style.width = logicalWidth + 'px';
-        canvas.style.height = logicalHeight + 'px';
-        
-        canvas.style.top = element.scrollTop + 'px';
-        spacer.style.width = logicalWidth + 'px';
-        spacer.style.height = Math.max(docHeight, element.clientHeight) + 'px';
-
-        if (docHeight < (element.clientHeight - 50) &&
-            doc.frame.actualWidth() <= availableWidth) {
-            element.style.overflow = 'hidden';
+            var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
+                logicalHeight = element.clientHeight,
+                eScroll = element.scrollTop
+            
+                canvas.width = dpr * logicalWidth;
+                canvas.height = dpr * logicalHeight;
+                canvas.style.width = logicalWidth + 'px';
+                canvas.style.height = logicalHeight + 'px';
+            
+                canvas.style.top = eScroll + 'px';
+                if (spacer != null) {
+                    spacer.style.width = logicalWidth + 'px';
+                    spacer.style.height = Math.max(docHeight, element.clientHeight) + 'px';
+                }
         } else {
-            element.style.overflow = 'auto';
+            var logicalWidth = drawRect.w,
+                logicalHeight = drawRect.h,
+                eScroll = drawRect.scroll
+        }
+
+        if (showOverflow) {
+            if (docHeight < (element.clientHeight - 50) &&
+                doc.frame.actualWidth() <= availableWidth) {
+                element.style.overflow = 'hidden';
+            } else {
+                element.style.overflow = 'auto';
+            }
         }
 
         var ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
+        if (drawRect === undefined) {
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+            ctx.translate(0, getVerticalOffset() - eScroll);
+            doc.draw(ctx, rect(0, eScroll, logicalWidth, logicalHeight));
+            doc.drawSelection(ctx, selectDragStart || ((textArea != null) && (document.activeElement === textArea)));
+        } else {
+            // Save current canvas state
+            ctx.save()
+            // Move to drawRect origin
+            ctx.translate(drawRect.x, drawRect.y);
+            // Clip region
+            ctx.rect(0, 0, drawRect.w, drawRect.h)
+            //ctx.stroke()
+            ctx.clip()
+            // Scroll
+            ctx.translate(0, getVerticalOffset() - eScroll);
+            // Draw
+            doc.draw(ctx, rect(0, eScroll, logicalWidth, logicalHeight));            
+            doc.drawSelection(ctx, selectDragStart || ((textArea != null) && (document.activeElement === textArea)));
+            // Load saved canvas state
+            ctx.restore()
+        }
 
-        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
-        ctx.translate(0, getVerticalOffset() - element.scrollTop);
-        
-        doc.draw(ctx, rect(0, element.scrollTop, logicalWidth, logicalHeight));
-        doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
+
+    if (drawRect !== undefined) {
+        drawRect.paint = paint
+    }
 
     dom.handleEvent(element, 'scroll', paint);
 
-    dom.handleEvent(textArea, 'input', function() {
-        var newText = textArea.value;
-        if (textAreaContent != newText) {
-            textAreaContent = '';
-            textArea.value = '';
-            if (newText === plainClipboard) {
-                newText = richClipboard;
+    // dom.handleEvent(textArea, 'input', function() {
+    if ((textArea != null) && (!readOnly)) {
+        dom.handleEvent(textArea, 'input', function() {
+            var newText = textArea.value;
+            if (textAreaContent != newText) {
+                textAreaContent = '';
+                textArea.value = '';
+                if (newText === plainClipboard) {
+                    newText = richClipboard;
+                }
+                doc.insert(newText);
             }
-            doc.insert(newText);
-        }
-    });
+        });
+    }
 
     var updateTextArea = function() {
+        if ((textArea == null) || (textAreaDiv == null) || readOnly) {
+            return;
+        }
         focusChar = focusChar === null ? doc.selection.end : focusChar;
         var endChar = doc.byOrdinal(focusChar);
         focusChar = null;
@@ -411,51 +488,61 @@ exports.create = function(element) {
         });
     }
 
-    registerMouseEvent('mousedown', function(node) {
-        selectDragStart = node.ordinal;
-        doc.select(node.ordinal, node.ordinal);
-        keyboardX = null;
-    });
+    //registerMouseEvents on spacer
+    if ((spacer != null) && (!readOnly)) {
+        registerMouseEvent('mousedown', function(node) {
+            selectDragStart = node.ordinal;
+            doc.select(node.ordinal, node.ordinal);
+            keyboardX = null;
+        });
 
-    registerMouseEvent('dblclick', function(node) {
-        node = node.parent();
-        if (node) {
-            doc.select(node.ordinal, node.ordinal +
-                (node.word ? node.word.text.length : node.length));
-        }
-    });
-
-    registerMouseEvent('mousemove', function(node) {
-        if (selectDragStart !== null) {
+        registerMouseEvent('dblclick', function(node) {
+            node = node.parent();
             if (node) {
-                focusChar = node.ordinal;
-                if (selectDragStart > node.ordinal) {
-                    doc.select(node.ordinal, selectDragStart);
-                } else {
-                    doc.select(selectDragStart, node.ordinal);
+                doc.select(node.ordinal, node.ordinal +
+                    (node.word ? node.word.text.length : node.length));
+            }
+        });
+
+        registerMouseEvent('mousemove', function(node) {
+            if (selectDragStart !== null) {
+                if (node) {
+                    focusChar = node.ordinal;
+                    if (selectDragStart > node.ordinal) {
+                        doc.select(node.ordinal, selectDragStart);
+                    } else {
+                        doc.select(selectDragStart, node.ordinal);
+                    }
                 }
             }
-        }
-    });
+        });
 
-    registerMouseEvent('mouseup', function(node) {
-        selectDragStart = null;
-        keyboardX = null;
-        updateTextArea();
-        textArea.focus();
-    });
+        registerMouseEvent('mouseup', function(node) {
+            selectDragStart = null;
+            keyboardX = null;
+            updateTextArea();
+            textArea.focus();
+        });
+    }
 
     var nextCaretToggle = new Date().getTime(),
-        focused = false,
-        cachedWidth = element.clientWidth,
+        focused = false;
+    if (drawRect === undefined) {
+        var cachedWidth = element.clientWidth,
         cachedHeight = element.clientHeight;
+    } else {
+        var cachedWidth = drawRect.w,
+        cachedHeight = drawRect.h;
+    }
 
     var update = function() {
         var requirePaint = false;
-        var newFocused = document.activeElement === textArea;
-        if (focused !== newFocused) {
-            focused = newFocused;
-            requirePaint = true;
+        if (textArea != null) {
+            var newFocused = document.activeElement === textArea;
+            if (focused !== newFocused) {
+                focused = newFocused;
+                requirePaint = true;
+            }
         }
 
         var now = new Date().getTime();
@@ -466,11 +553,19 @@ exports.create = function(element) {
             }
         }
 
-        if (element.clientWidth !== cachedWidth ||
-            element.clientHeight !== cachedHeight) {
+        if (drawRect === undefined) {
+            var ew = element.clientWidth,
+                eh = element.clientHeight;
+        } else {
+            var ew = drawRect.w,
+                eh = drawRect.h;
+        }
+
+        if (ew !== cachedWidth ||
+            eh !== cachedHeight) {
             requirePaint = true;
-            cachedWidth =element.clientWidth;
-            cachedHeight = element.clientHeight;
+            cachedWidth = ew;
+            cachedHeight = eh;
         }
 
         if (requirePaint) {
@@ -481,6 +576,8 @@ exports.create = function(element) {
     dom.handleEvent(canvas, 'carotaEditorSharedTimer', update);
     update();
 
-    doc.sendKey = handleKey;
+    if (!readOnly) {
+        doc.sendKey = handleKey;
+    }
     return doc;
 };
