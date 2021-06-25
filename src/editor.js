@@ -340,7 +340,7 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
         return 0;
     }
 
-    var paint = function() {
+    var painter = function() {
 
         if (drawRect === undefined) {
             var availableWidth = element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!        
@@ -419,8 +419,16 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
 
     };
 
+    var paint = function() {
+        if ((drawRect !== undefined) && (drawRect.redraw !== null)) {
+            drawRect.redraw();
+        } else {
+            painter();
+        }
+    }
+
     if (drawRect !== undefined) {
-        drawRect.paint = paint
+        drawRect.paint = painter
     }
 
     dom.handleEvent(element, 'scroll', paint);
