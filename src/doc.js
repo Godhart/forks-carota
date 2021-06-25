@@ -302,7 +302,11 @@ var prototype = node.derive({
             if (this.selectionJustChanged) {
                 this.selectionJustChanged = false;
             } else {
-                this.caretVisible = !this.caretVisible;
+                if (this.showCarret) {
+                    this.caretVisible = !this.caretVisible;
+                } else {
+                    this.caretVisible = false;
+                }
             }
         }
         return this.caretVisible !== old;
@@ -346,7 +350,7 @@ var prototype = node.derive({
     },
     drawSelection: function(ctx, hasFocus) {
         if (this.selection.end === this.selection.start) {
-            if (this.selectionJustChanged || hasFocus && this.caretVisible) {
+            if ((this.selectionJustChanged || hasFocus && this.caretVisible) && this.showCarret) {
                 var caret = this.getCaretCoords(this.selection.start);
                 if (caret) {
                     ctx.save();
@@ -388,7 +392,7 @@ var prototype = node.derive({
             this.frame.length - 1
         );
         this.selectionJustChanged = true;
-        this.caretVisible = true;
+        this.caretVisible = this.showCarret;
         this.nextInsertFormatting = {};
 
         /*  NB. always fire this even if the positions stayed the same. The
@@ -442,11 +446,15 @@ var prototype = node.derive({
     type: 'document'
 });
 
-exports = module.exports = function() {
+exports = module.exports = function(showCarret) {    
     var doc = Object.create(prototype);
     doc._width = 0;
     doc.selection = { start: 0, end: 0 };
-    doc.caretVisible = true;
+    if (showCarret === undefined) {
+        showCarret = true;
+    }
+    doc.showCarret = showCarret;
+    doc.caretVisible = showCarret;
     doc.customCodes = function(code, data, allCodes) {};
     doc.codes = function(code, data) {
         var instance = codes(code, data, doc.codes);
