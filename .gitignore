@@ -3,3 +3,4 @@ node_modules/
 npm-debug.log
 carota-debug.js
 carota-min.js
+package-lock.json
