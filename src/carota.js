@@ -7,6 +7,7 @@ var html = require('./html');
 var frame = require('./frame');
 var text = require('./text');
 var rect = require('./rect');
+var wrapper = require('./wrapper');
 
 var bundle = {
     node: node,
@@ -17,7 +18,8 @@ var bundle = {
     html: html,
     frame: frame,
     text: text,
-    rect: rect
+    rect: rect,
+    wrapper: wrapper
 };
 
 module.exports = bundle;
