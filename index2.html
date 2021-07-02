@@ -342,7 +342,7 @@
             draw_canvas,
             //"[{\"text\": \"Hello, World!\",\"size\": 30},{\"text\":{\"smiley\":true}}]", 
             "[{\"text\": \"Hello, World!\",\"size\": 30}]", 
-            {"smiley": document.querySelector('#smiley img')},
+            {"smiley": {"image": document.querySelector('#smiley img'), "width": 24, "ascent": 24}},
             10, 40, 180, 180, 20,
             redraw
         );
