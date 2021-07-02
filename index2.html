@@ -304,45 +304,61 @@
     </div>
 
     <script>
-    var redraw = function() {
-        var canvas = document.querySelector('#drawCanvas');
-        var ctx = canvas.getContext('2d');
-        ctx.setTransform();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        var dpr = Math.max(1, window.devicePixelRatio || 1);
-        ctx.scale(dpr, dpr);
-        drawRect.paint();
+
+    var draw_canvas = document.querySelector('#drawCanvas');
+
+    var redraw = function(paint_call) {
+        var draw_canvas_ctx = draw_canvas.getContext('2d');
+        var draw_dpr = Math.max(1, window.devicePixelRatio || 1);
+        draw_canvas_ctx.setTransform();
+        draw_canvas_ctx.clearRect(0, 0, draw_canvas.width, draw_canvas.height);        
+        draw_canvas_ctx.scale(draw_dpr, draw_dpr);
+        paint_call();
     }
 
-    var drawRect = {
-        "x": 10, "y": 40, "w": 180, "h": 180,   // Drawing area coords of top left corner and width/height
-        "scroll": 20,                           // Vertical scroll
-        "canvas": undefined,                    // Canvas to draw on. Set to undefined if draw on canvas, that were specified on editor creation, set to null to don't draw at all
-        "redraw": redraw,                       // Function to prepare canvas before text area to be redrawn. redraw function should explicitly call paint method of drawRect to draw text. Set to null if not required.
-        "paint": function(){}                   // Function to paint text on canvas. Is set with actual call handler when editor is created
-    };
-
-    var scroll_dir = 1;
-    var scroll_demo = function() {
+    var drawRect = undefined;
+    var scroll_dir = -1;
+    var scroll_demo = function() {        
+        if (drawRect === undefined) {
+            return;
+        }
         if ((drawRect.scroll+scroll_dir < 100) && (drawRect.scroll+scroll_dir > 0)) {
             drawRect.scroll += scroll_dir;
         } else {
             scroll_dir = -scroll_dir;
         }
-        redraw()
+        redraw(drawRect.paint)
     }
 
-    window.setInterval(scroll_demo, 100);
-
+    window.setInterval(scroll_demo, 10);
+    
+    
     window.onload = function() {
         var elem = document.querySelector('#exampleEditor');
         //var exampleEditor = carota.editor.create(elem);
+        
+        var viewer = carota.wrapper.viewer(
+            elem,
+            draw_canvas,
+            //"[{\"text\": \"Hello, World!\",\"size\": 30},{\"text\":{\"smiley\":true}}]", 
+            "[{\"text\": \"Hello, World!\",\"size\": 30}]", 
+            {"smiley": document.querySelector('#smiley img')},
+            10, 40, 180, 180, 20,
+            redraw
+        );
+
+        var exampleEditor = viewer.doc;
+        drawRect = viewer.area;
+
+        /*
         var exampleEditor = carota.editor.create(elem,
         undefined, null, null, null, 
         true,       // ReadOnly
         false,      // ShowOverflow
         drawRect);
+        */
 
+        /*
         // Set up our custom inline - a smiley emoji
         var smiley = document.querySelector('#smiley img');
 
@@ -351,7 +367,7 @@
                 // Must return an object that encapsulates the inline
                 return {
                     // measure: must return width, ascent and descent
-                    measure: function(/*formatting*/) {
+                    measure: function() {
                         return {
                             width: 24,
                             ascent: 24,
@@ -365,6 +381,7 @@
                 }
             }
         };
+        */
 
         // Setting up the button so user can insert a smiley
         carota.dom.handleEvent(document.querySelector('#smiley'), 'click', function() {
@@ -482,7 +499,7 @@
             })();
         }
 
-        load('#welcome');
+        //load('#welcome');
         /*exampleEditor.load([
             { text: 'A' },
             { text: { $: 'listStart' }, color: 'blue' },
