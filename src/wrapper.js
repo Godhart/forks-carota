@@ -1,7 +1,7 @@
 var editor = require('./editor');
 
 function setEmojis(editorInst, emojis) {
-    if ((emojis !== undefined) && (emojis !== null) && (emojis.length > 0)) {
+    if ((emojis !== undefined) && (emojis !== null) && (Object.keys(emojis).length > 0)) {
         editorInst.customCodes = function(obj) {
             for (key in emojis){
                 if ((key in obj) && (obj[key])) {
