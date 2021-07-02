@@ -419,16 +419,18 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
 
     };
 
+    if (drawRect !== undefined) {
+        drawRect.paint = painter;
+    }
+
     var paint = function() {
-        if ((drawRect !== undefined) && (drawRect.redraw !== null)) {
-            drawRect.redraw();
+        if (drawRect !== undefined) {
+            if (("redraw" in drawRect) && (drawRect.redraw !== undefined) && (drawRect.redraw !== null)) {
+                drawRect.redraw(drawRect.paint);
+            }
         } else {
             painter();
         }
-    }
-
-    if (drawRect !== undefined) {
-        drawRect.paint = painter
     }
 
     dom.handleEvent(element, 'scroll', paint);
