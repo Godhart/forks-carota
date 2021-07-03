@@ -269,7 +269,7 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
         if (ctrlKey && toggle) {
             var selRange = doc.selectedRange();
             selRange.setFormatting(toggle, selRange.getFormatting()[toggle] !== true);
-            paint();
+            paint(true);
             handled = true;
         }
 
@@ -319,7 +319,7 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
     
     doc.setVerticalAlignment = function(va) {
         verticalAlignment = va;
-        paint();
+        paint(true);
     }
 
     function getVerticalOffset() {
@@ -416,14 +416,17 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
             // Load saved canvas state
             ctx.restore()
         }
-
+        doc.requirePaint = false;
     };
 
     if (drawRect !== undefined) {
         drawRect.paint = painter;
     }
 
-    var paint = function() {
+    var paint = function(requirePaint) {
+        if (requirePaint !== undefined) {
+            doc.requirePaint |= requirePaint;
+        }
         if (drawRect !== undefined) {
             if (("redraw" in drawRect) && (drawRect.redraw !== undefined) && (drawRect.redraw !== null)) {
                 drawRect.redraw(drawRect.paint);
@@ -491,7 +494,7 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
     };
 
     doc.selectionChanged(function(getformatting, takeFocus) {
-        paint();
+        paint(true);
         if (!selectDragStart) {
             if (takeFocus !== false) {
                 updateTextArea();
@@ -586,7 +589,7 @@ exports.create = function(element, canvas, spacer, textAreaDiv, textArea, readOn
         }
 
         if (requirePaint) {
-            paint();
+            paint(true);
         }
     };
 

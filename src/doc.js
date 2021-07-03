@@ -455,6 +455,7 @@ exports = module.exports = function(showCarret) {
     }
     doc.showCarret = showCarret;
     doc.caretVisible = showCarret;
+    doc.requirePaint = showCarret;
     doc.customCodes = function(code, data, allCodes) {};
     doc.codes = function(code, data) {
         var instance = codes(code, data, doc.codes);
